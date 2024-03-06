@@ -17,7 +17,7 @@
 #
 # sync feedback sensor:
 #   Creates simple button and publishes events based on state change
-# 
+#
 # Copyright (C) 2023  moggieuk#6538 (discord)
 #                     moggieuk@hotmail.com
 #
@@ -31,6 +31,9 @@
 # This file may be distributed under the terms of the GNU GPLv3 license.
 #
 import logging, time
+
+from extras.mmu_toolhead import MAX_GATES
+
 
 class MmuRunoutHelper:
     def __init__(self, printer, name, insert_gcode, runout_gcode, event_delay, pause_delay):
@@ -139,7 +142,7 @@ class MmuSensors:
         pause_delay = config.get('pause_delay', 0.1)
 
         # Setup and pre-gate sensors that are defined...
-        for gate in range(23):
+        for gate in range(MAX_GATES):
             switch_pin = config.get('pre_gate_switch_pin_%d' % gate, None)
 
             if switch_pin is None or self._is_empty_pin(switch_pin):

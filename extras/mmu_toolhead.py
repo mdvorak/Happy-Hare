@@ -21,6 +21,8 @@ import stepper, chelper, toolhead
 from extras.homing import Homing, HomingMove
 from kinematics.extruder import PrinterExtruder, DummyExtruder, ExtruderStepper
 
+MAX_GATES = 23
+
 # Main code to track events (and their timing) on the MMU Machine implemented as additional "toolhead"
 # (code pulled from toolhead.py)
 class MmuToolHead(toolhead.ToolHead, object):
@@ -100,7 +102,7 @@ class MmuToolHead(toolhead.ToolHead, object):
         # Normal gear rail kinematics when extruder is synced to gear rail
         ffi_main, ffi_lib = chelper.get_ffi()
         self.sk_default = ffi_main.gc(ffi_lib.cartesian_stepper_alloc(b'y'), ffi_lib.free)
-        
+
         # Create MMU kinematics
         try:
             self.kin = MmuKinematics(self, config)
@@ -187,15 +189,17 @@ class MmuToolHead(toolhead.ToolHead, object):
         g_pos = gear_rail.get_commanded_position()
         gear_rail.steppers = []
         # TODO need to handle step generators? or can they safety always be assigned to toolhead?
-        if selected_steppers:
-            for s in self.all_gear_rail_steppers:
-                if s.get_name() in selected_steppers:
-                    gear_rail.steppers.append(s)
-            if not gear_rail.steppers:
-                raise self.printer.command_error("None of these `%s` gear steppers where found!" % selected_steppers)
-            gear_rail.set_position([g_pos, 0., 0.])
-        else:
-            pass # TODO bypass removes all steppers - is this safe or do we always need stepper[0]?
+        gear_rail.steppers = selected_steppers or []
+        gear_rail.set_position([g_pos, 0., 0.])
+        # if selected_steppers:
+        #     for s in self.all_gear_rail_steppers:
+        #         if s.get_name() in selected_steppers:
+        #             gear_rail.steppers.append(s)
+        #     if not gear_rail.steppers:
+        #         raise self.printer.command_error("None of these `%s` gear steppers where found!" % selected_steppers)
+        #     gear_rail.set_position([g_pos, 0., 0.])
+        # else:
+        #     pass # TODO bypass removes all steppers - is this safe or do we always need stepper[0]?
 
         # Restore previous synchronization state if any with new gear steppers
         if gear_motion_queue:
@@ -427,7 +431,7 @@ class MmuKinematics:
         self.gear_max_velocity, self.gear_max_accel = toolhead.get_gear_limits()
         self.move_accel = None
         self.limits = [(1.0, -1.0)] * len(self.rails)
-    
+
     def get_steppers(self):
         return [s for rail in self.rails for s in rail.get_steppers()]
 
@@ -444,7 +448,7 @@ class MmuKinematics:
                 self.toolhead.resync_gear_position_to_extruder() # Better done on Rail itself but rail doesn't know it's the mmu gear
             if i in homing_axes:
                 self.limits[i] = rail.get_range()
-    
+
     def home(self, homing_state):
         for axis in homing_state.get_axes():
             if not axis == 0: # Saftey: Only selector (axis[0]) can be homed
@@ -469,7 +473,7 @@ class MmuKinematics:
         xpos, ypos = move.end_pos[:2]
         if xpos != 0. and (xpos < limits[0][0] or xpos > limits[0][1]):
             raise move.move_error()
-        
+
         if move.axes_d[0]: # Selector
             move.limit_speed(self.selector_max_velocity, self.selector_max_accel)
         elif move.axes_d[1]: # Gear
@@ -489,7 +493,7 @@ class MmuHoming(Homing, object):
     def __init__(self, printer, mmu_toolhead):
         super(MmuHoming, self).__init__(printer)
         self.toolhead = mmu_toolhead # Override default toolhead
-    
+
     def home_rails(self, rails, forcepos, movepos):
         # Notify of upcoming homing operation
         self.printer.send_event("homing:home_rails_begin", self, rails)
@@ -625,7 +629,7 @@ class MmuPrinterRail(stepper.PrinterRail, object):
 # Wrapper for multiple stepper motor support
 def MmuLookupMultiRail(config, need_position_minmax=True, default_position_endstop=None, units_in_radians=False):
     rail = MmuPrinterRail(config, need_position_minmax=need_position_minmax, default_position_endstop=default_position_endstop, units_in_radians=units_in_radians)
-    for i in range(23):
+    for i in range(MAX_GATES):
         section_name = "%s_%s" % (config.get_name(), str(i))
         if not config.has_section(section_name):
             continue
