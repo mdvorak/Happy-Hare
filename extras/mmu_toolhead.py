@@ -637,11 +637,13 @@ class MmuPrinterRail(stepper.PrinterRail, object):
 
 # Wrapper for multiple stepper motor support
 def MmuLookupMultiRail(config, need_position_minmax=True, default_position_endstop=None, units_in_radians=False):
+    logging.info("MmuLookupMultiRail %s", config.get_name())
     rail = MmuPrinterRail(config, need_position_minmax=need_position_minmax, default_position_endstop=default_position_endstop, units_in_radians=units_in_radians)
     for i in range(MAX_GATES):
         section_name = "%s_%s" % (config.get_name(), str(i))
         if not config.has_section(section_name):
             continue
+        logging.info("MmuLookupMultiRail add_extra_stepper %s", section_name)
         rail.add_extra_stepper(config.getsection(section_name))
     return rail
 
