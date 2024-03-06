@@ -112,7 +112,7 @@ class MmuToolHead(toolhead.ToolHead, object):
             shared = config.getint('shared_gear_steppers', 0)
             last_gear = self.all_gear_rail_steppers[0] # First is always default gear
             for gate in range(MAX_GATES):
-                gear = next(s for s in self.all_gear_rail_steppers if s.get_name() == "mmu_gear_%d" % gate)
+                gear = next((s for s in self.all_gear_rail_steppers if s.get_name() == "mmu_gear_%d" % gate), None)
                 if (shared or gate == 0) and gear is None:
                     gear = last_gear
                 self.gate_gear_mapping.append(gear)
