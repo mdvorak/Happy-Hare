@@ -107,6 +107,16 @@ class MmuToolHead(toolhead.ToolHead, object):
         try:
             self.kin = MmuKinematics(self, config)
             self.all_gear_rail_steppers = self.kin.rails[1].get_steppers()
+
+            self.gate_gear_mapping = []
+            shared = config.getint('shared_gear_steppers', 0)
+            last_gear = self.all_gear_rail_steppers[0] if shared else None
+            for gate in range(MAX_GATES):
+                gear = next(s for s in self.all_gear_rail_steppers if s.get_name() == "mmu_gear_%d" % gate)
+                if shared and gear is None:
+                    gear = last_gear
+                self.gate_gear_mapping.append(gear)
+                last_gear = gear
         except config.error as e:
             raise
         except self.printer.lookup_object('pins').error as e:
@@ -169,12 +179,12 @@ class MmuToolHead(toolhead.ToolHead, object):
 
     def select_gear_stepper(self, gate): # TODO untested WIP
         if gate < 0:
-            self.select_gear_steppers(None)
+            self._select_gear_steppers(None)
         else:
-            self.select_gear_steppers(["mmu_gear_%d" % gate])
+            self._select_gear_steppers(self.gate_gear_mapping[gate])
         return
 
-    def select_gear_steppers(self, selected_steppers): # TODO untested WIP
+    def _select_gear_steppers(self, selected_steppers): # TODO untested WIP
         # Unsync first to simplify transition
         gear_motion_queue = self.gear_motion_queue
         extruder_synced_to_gear = self.extruder_synced_to_gear
@@ -187,7 +197,6 @@ class MmuToolHead(toolhead.ToolHead, object):
         self.flush_step_generation()
         gear_rail = self.get_kinematics().rails[1]
         g_pos = gear_rail.get_commanded_position()
-        gear_rail.steppers = []
         # TODO need to handle step generators? or can they safety always be assigned to toolhead?
         gear_rail.steppers = selected_steppers or []
         gear_rail.set_position([g_pos, 0., 0.])
