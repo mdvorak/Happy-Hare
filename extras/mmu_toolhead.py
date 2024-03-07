@@ -181,7 +181,7 @@ class MmuToolHead(toolhead.ToolHead, object):
         if gate < 0:
             self._select_gear_steppers(None)
         else:
-            self._select_gear_steppers(self.gate_gear_mapping[gate])
+            self._select_gear_steppers([self.gate_gear_mapping[gate]])
         return
 
     def _select_gear_steppers(self, selected_steppers): # TODO untested WIP
@@ -198,8 +198,10 @@ class MmuToolHead(toolhead.ToolHead, object):
         gear_rail = self.get_kinematics().rails[1]
         g_pos = gear_rail.get_commanded_position()
         # TODO need to handle step generators? or can they safety always be assigned to toolhead?
-        gear_rail.steppers = selected_steppers or []
-        gear_rail.set_position([g_pos, 0., 0.])
+        gear_rail.steppers = []
+        if selected_steppers:
+            gear_rail.steppers = selected_steppers
+            gear_rail.set_position([g_pos, 0., 0.])
         # if selected_steppers:
         #     for s in self.all_gear_rail_steppers:
         #         if s.get_name() in selected_steppers:
