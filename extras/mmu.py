@@ -934,7 +934,8 @@ class Mmu:
 
     def _initialize_state(self):
         self.is_enabled = self.runout_enabled = True
-        self.is_homed = self.calibrating = False
+        self.is_homed = True if self.virtual_selector else False
+        self.calibrating = False
         self.last_print_stats = self.paused_extruder_temp = None
         self.tool_selected = self._next_tool = self._last_tool = self.TOOL_GATE_UNKNOWN
         self.tool_selected = self._next_tool = self._last_tool = self.TOOL_GATE_UNKNOWN
@@ -4113,7 +4114,9 @@ class Mmu:
 #################################
 
     def _home(self, tool = -1, force_unload = -1):
-        if self.virtual_selector: return
+        if self.virtual_selector:
+            self.is_homed = True
+            return
         if self._check_in_bypass(): return
         with self._wrap_action(self.ACTION_HOMING):
             self._log_info("Homing MMU...")
